@@ -1,0 +1,26 @@
+{
+  "name": "crypto-tracker-frontend",
+  "version": "1.0.0",
+  "description": "Crypto Tracker Frontend with Data Visualization",
+  "private": true,
+  "dependencies": {
+    "autoprefixer": "^10.4.27",
+    "axios": "^1.6.0",
+    "chart.js": "^4.4.0",
+    "react": "^18.2.0",
+    "react-chartjs-2": "^5.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.18.0",
+    "recharts": "^2.10.0",
+    "tailwindcss": "^3.3.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "vite": "^4.5.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  }
+}

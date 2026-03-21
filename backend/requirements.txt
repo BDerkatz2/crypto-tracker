@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+pydantic
+sqlalchemy
+python-dotenv
+redis
+httpx
+requests
+python-multipart
