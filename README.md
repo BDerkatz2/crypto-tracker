@@ -4,14 +4,14 @@ A comprehensive cryptocurrency tracking application built with Python/FastAPI (b
 
 ## Features
 
-✨ **Core Features:**
-- 🔍 **Crypto Search & Discovery** - Browse and search cryptocurrencies from CoinGecko API
-- 📊 **Data Visualization** - Interactive price charts and portfolio allocation charts
-- 💼 **Portfolio Management** - Track your cryptocurrency holdings with purchase history
-- 👁️ **Watchlist** - Monitor favorite cryptocurrencies
-- 📈 **User-Specific Insights** - Detailed portfolio analytics and performance metrics
-- ⚡ **Redis Caching** - Fast data retrieval with intelligent caching strategy
-- 🎨 **Modern UI** - Responsive design with Tailwind CSS
+ **Core Features:**
+ **Crypto Search & Discovery** - Browse and search cryptocurrencies from CoinGecko API
+ **Data Visualization** - Interactive price charts and portfolio allocation charts
+ **Portfolio Management** - Track your cryptocurrency holdings with purchase history
+ **Watchlist** - Monitor favorite cryptocurrencies
+ **User-Specific Insights** - Detailed portfolio analytics and performance metrics
+ **Redis Caching** - Fast data retrieval with intelligent caching strategy
+ **Modern UI** - Responsive design with Tailwind CSS
 
 ## Project Structure
 
