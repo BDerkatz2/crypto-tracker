@@ -1,7 +1,7 @@
 services:
   - type: web
     name: crypto-tracker-backend
-    runtime: python
+    env: python
     rootDir: backend
     plan: free
     buildCommand: pip install -r requirements.txt
@@ -24,8 +24,9 @@ services:
       - key: CORS_ORIGINS
         value: '["https://crypto-tracker-frontend.onrender.com"]'
 
-  - type: static
+  - type: web
     name: crypto-tracker-frontend
+    env: static
     rootDir: frontend
     buildCommand: npm install && npm run build
     staticPublishPath: dist
