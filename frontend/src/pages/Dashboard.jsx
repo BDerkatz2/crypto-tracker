@@ -18,11 +18,19 @@ export default function Dashboard() {
     setLoading(true);
     try {
       const response = await cryptoAPI.getCryptoData(selectedCrypto.id);
-      if (response.data.data) {
-        setCryptoDetails(response.data.data[0]);
+      const payload = response.data;
+      const details = Array.isArray(payload?.data)
+        ? payload.data[0]
+        : payload;
+
+      if (details && details.id) {
+        setCryptoDetails(details);
+      } else {
+        setCryptoDetails(null);
       }
     } catch (error) {
       console.error('Error loading crypto details:', error);
+      setCryptoDetails(null);
     } finally {
       setLoading(false);
     }

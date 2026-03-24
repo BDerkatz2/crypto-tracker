@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Watchlist
 from app.schemas import WatchlistCreate, WatchlistResponse
+from app.services.user_service import ensure_user_exists
 from typing import List
 
 router = APIRouter()
@@ -16,6 +17,8 @@ async def get_watchlist(user_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=WatchlistResponse, tags=["watchlist"])
 async def add_to_watchlist(user_id: int, item: WatchlistCreate, db: Session = Depends(get_db)):
     """Add cryptocurrency to watchlist"""
+    ensure_user_exists(db, user_id)
+
     # Check if already in watchlist
     existing = db.query(Watchlist).filter(
         Watchlist.user_id == user_id,

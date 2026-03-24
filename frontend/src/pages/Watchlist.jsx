@@ -41,7 +41,8 @@ export default function Watchlist() {
       loadWatchlist();
     } catch (error) {
       console.error('Error adding to watchlist:', error);
-      alert('Failed to add to watchlist');
+      const detail = error?.response?.data?.detail;
+      alert(detail || 'Failed to add to watchlist');
     }
   };
 

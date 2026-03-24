@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.models import Portfolio
 from app.schemas import PortfolioCreate, PortfolioResponse, PortfolioUpdate
+from app.services.user_service import ensure_user_exists
 from typing import List
 
 router = APIRouter()
@@ -16,6 +17,8 @@ async def get_portfolio(user_id: int, db: Session = Depends(get_db)):
 @router.post("/", response_model=PortfolioResponse, tags=["portfolio"])
 async def add_to_portfolio(user_id: int, item: PortfolioCreate, db: Session = Depends(get_db)):
     """Add cryptocurrency to portfolio"""
+    ensure_user_exists(db, user_id)
+
     portfolio_item = Portfolio(
         user_id=user_id,
         crypto_id=item.crypto_id,
