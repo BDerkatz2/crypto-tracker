@@ -34,10 +34,6 @@ services:
     envVars:
       - key: VITE_API_URL
         value: https://crypto-tracker-backend.onrender.com/api/v1
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
 
   - type: redis
     name: crypto-tracker-redis
