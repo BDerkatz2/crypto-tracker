@@ -1,0 +1,50 @@
+services:
+  - type: web
+    name: crypto-tracker-backend
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crypto-tracker-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: crypto-tracker-redis
+          property: connectionString
+      - key: REDIS_CACHE_EXPIRY
+        value: "300"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: '["https://crypto-tracker-frontend.onrender.com"]'
+
+  - type: static
+    name: crypto-tracker-frontend
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: VITE_API_URL
+        value: https://crypto-tracker-backend.onrender.com/api/v1
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+  - type: redis
+    name: crypto-tracker-redis
+    ipAllowList: []
+
+
+databases:
+  - name: crypto-tracker-db
+    plan: free
+    databaseName: crypto_tracker
+    user: crypto_tracker_user

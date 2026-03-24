@@ -1,7 +1,31 @@
 import os
+import json
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _parse_cors_origins() -> list[str]:
+    """Parse CORS_ORIGINS from env as JSON array or comma-separated values."""
+    raw = os.getenv("CORS_ORIGINS")
+    if not raw:
+        return [
+            "http://localhost:3000",
+            "http://localhost:8000",
+        ]
+
+    # Accept JSON array input: ["https://a.com", "https://b.com"]
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, list):
+            cleaned = [str(origin).strip() for origin in parsed if str(origin).strip()]
+            if cleaned:
+                return cleaned
+    except Exception:
+        pass
+
+    # Fallback to comma-separated values.
+    return [origin.strip() for origin in raw.split(",") if origin.strip()]
 
 class Settings:
     # API Configuration
@@ -25,9 +49,6 @@ class Settings:
     COINGECKO_API_URL = "https://api.coingecko.com/api/v3"
     
     # CORS Configuration
-    CORS_ORIGINS = [
-        "http://localhost:3000",
-        "http://localhost:8000",
-    ]
+    CORS_ORIGINS = _parse_cors_origins()
 
 settings = Settings()

@@ -7,3 +7,4 @@ redis
 httpx
 requests
 python-multipart
+psycopg2-binary
