@@ -7,7 +7,14 @@ import asyncio
 class CryptoAPIService:
     def __init__(self):
         self.base_url = settings.COINGECKO_API_URL
-    
+
+    def _get_headers(self) -> dict:
+        """Build request headers, including CoinGecko API key when configured."""
+        headers = {"accept": "application/json"}
+        if settings.COINGECKO_API_KEY:
+            headers["x-cg-demo-api-key"] = settings.COINGECKO_API_KEY
+        return headers
+
     async def get_crypto_data(self, crypto_ids: List[str]) -> List[Dict]:
         """
         Fetch cryptocurrency data from CoinGecko API
@@ -24,16 +31,17 @@ class CryptoAPIService:
             async with httpx.AsyncClient() as client:
                 params = {
                     "ids": ",".join(crypto_ids),
-                    "vs_currencies": "usd",
+                    "vs_currency": "usd",
                     "order": "market_cap_desc",
                     "per_page": 250,
                     "sparkline": False,
-                    "market_cap_change_percentage": "24h"
+                    "price_change_percentage": "24h"
                 }
                 
                 response = await client.get(
                     f"{self.base_url}/coins/markets",
                     params=params,
+                    headers=self._get_headers(),
                     timeout=10
                 )
                 response.raise_for_status()
@@ -43,7 +51,7 @@ class CryptoAPIService:
                 await cache_manager.set(cache_key, data)
                 return data
         except Exception as e:
-            print(f"API Error: {e}")
+            print(f"API Error (get_crypto_data): {e}")
             return []
     
     async def get_crypto_price_history(self, crypto_id: str, days: int = 7) -> Dict:
@@ -62,6 +70,7 @@ class CryptoAPIService:
                         "vs_currency": "usd",
                         "days": days
                     },
+                    headers=self._get_headers(),
                     timeout=10
                 )
                 response.raise_for_status()
@@ -71,7 +80,7 @@ class CryptoAPIService:
                 await cache_manager.set(cache_key, data, expiry=3600)  # 1 hour
                 return data
         except Exception as e:
-            print(f"API Error: {e}")
+            print(f"API Error (get_crypto_price_history): {e}")
             return {}
     
     async def search_crypto(self, query: str) -> List[Dict]:
@@ -81,13 +90,14 @@ class CryptoAPIService:
                 response = await client.get(
                     f"{self.base_url}/search",
                     params={"query": query},
+                    headers=self._get_headers(),
                     timeout=10
                 )
                 response.raise_for_status()
                 data = response.json()
                 return data.get("coins", [])[:10]  # Return top 10 results
         except Exception as e:
-            print(f"API Error: {e}")
+            print(f"API Error (search_crypto): {e}")
             return []
     
     async def get_trending_cryptos(self) -> List[Dict]:
@@ -102,6 +112,7 @@ class CryptoAPIService:
             async with httpx.AsyncClient() as client:
                 response = await client.get(
                     f"{self.base_url}/search/trending",
+                    headers=self._get_headers(),
                     timeout=10
                 )
                 response.raise_for_status()

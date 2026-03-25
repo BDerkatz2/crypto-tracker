@@ -22,7 +22,9 @@ services:
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: '["https://crypto-tracker-frontend.onrender.com"]'
+        value: '*'
+      - key: COINGECKO_API_KEY
+        value: ''
 
   - type: web
     name: crypto-tracker-frontend
@@ -33,7 +35,7 @@ services:
     pullRequestPreviewsEnabled: false
     envVars:
       - key: VITE_API_URL
-        value: https://crypto-tracker-backend.onrender.com/api/v1
+        sync: false
 
   - type: redis
     name: crypto-tracker-redis

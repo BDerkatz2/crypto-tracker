@@ -47,6 +47,7 @@ class Settings:
     
     # Crypto API Configuration
     COINGECKO_API_URL = "https://api.coingecko.com/api/v3"
+    COINGECKO_API_KEY = os.getenv("COINGECKO_API_KEY", "")
     
     # CORS Configuration
     CORS_ORIGINS = _parse_cors_origins()
