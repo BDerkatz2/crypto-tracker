@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [cryptoDetails, setCryptoDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(false);
+  const [detailsErrorMessage, setDetailsErrorMessage] = useState('');
   const [slowLoad, setSlowLoad] = useState(false);
   const detailsRequestRef = useRef(0);
 
@@ -21,6 +22,7 @@ export default function Dashboard() {
     const requestId = ++detailsRequestRef.current;
     setLoading(true);
     setDetailsError(false);
+    setDetailsErrorMessage('');
     setCryptoDetails(null);
     setSlowLoad(false);
 
@@ -43,16 +45,27 @@ export default function Dashboard() {
       if (details && details.id) {
         setCryptoDetails(details);
       } else {
-        console.warn('getCryptoData returned no usable details. Raw response:', response.data);
+        if (import.meta.env.DEV) {
+          console.warn('getCryptoData returned no usable details. Raw response:', response.data);
+        }
         setCryptoDetails(null);
         setDetailsError(true);
+        setDetailsErrorMessage('No price data available for this coin right now. Please try another coin or retry in a few seconds.');
       }
     } catch (error) {
       clearTimeout(slowTimer);
       if (requestId !== detailsRequestRef.current) return;
-      console.error('Error loading crypto details:', error);
+      if (import.meta.env.DEV) {
+        console.error('Error loading crypto details:', error);
+      }
+      const status = error?.response?.status;
       setCryptoDetails(null);
       setDetailsError(true);
+      setDetailsErrorMessage(
+        status === 503 || !error?.response
+          ? 'Data service is waking up. Please wait 30-60 seconds and try again.'
+          : 'Could not load price data right now. Please try again.'
+      );
     } finally {
       if (requestId !== detailsRequestRef.current) return;
       setLoading(false);
@@ -134,7 +147,7 @@ export default function Dashboard() {
                   ) : null}
                   {detailsError && !loading && (
                     <div className="mt-4 text-center text-slate-500 text-sm">
-                      Could not load price data. Check console for details.
+                      {detailsErrorMessage || 'Could not load price data right now.'}
                     </div>
                   )}
                 </div>
