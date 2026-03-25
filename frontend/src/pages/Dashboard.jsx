@@ -86,7 +86,8 @@ export default function Dashboard() {
                     <div className="mt-4 text-center text-slate-400">
                       <div className="inline-block animate-spin">⌛</div> Loading details...
                     </div>
-                  ) : cryptoDetails ? (                    <div className="mt-6 grid grid-cols-2 gap-4">
+                  ) : cryptoDetails ? (
+                    <div className="mt-6 grid grid-cols-2 gap-4">
                       <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
                         <span className="text-slate-400 text-sm">Market Cap</span>
                         <p className="text-2xl font-bold text-white mt-1">
