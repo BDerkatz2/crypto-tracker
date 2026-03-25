@@ -4,8 +4,13 @@ from app.config import settings
 from app.database import Base, engine
 from app.routes import crypto, watchlist, portfolio, insights
 
-# Create tables
-Base.metadata.create_all(bind=engine)
+# Create tables (with graceful error handling)
+try:
+    Base.metadata.create_all(bind=engine)
+    print("✓ Database tables initialized")
+except Exception as e:
+    print(f"⚠ Could not initialize database tables: {e}")
+    print("  Continuing without database (SQLite fallback)")
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
