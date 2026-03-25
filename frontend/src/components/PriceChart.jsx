@@ -8,6 +8,15 @@ export default function PriceChart({ cryptoId, cryptoName }) {
   const [slowLoad, setSlowLoad] = useState(false);
   const [period, setPeriod] = useState(7);
   const chartRequestRef = useRef(0);
+  const autoRetryRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoRetryRef.current) {
+        clearTimeout(autoRetryRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (cryptoId) {
@@ -16,6 +25,11 @@ export default function PriceChart({ cryptoId, cryptoName }) {
   }, [cryptoId, period]);
 
   const loadChartData = async () => {
+    if (autoRetryRef.current) {
+      clearTimeout(autoRetryRef.current);
+      autoRetryRef.current = null;
+    }
+
     const requestId = ++chartRequestRef.current;
     setLoading(true);
     setSlowLoad(false);
@@ -41,7 +55,15 @@ export default function PriceChart({ cryptoId, cryptoName }) {
     } catch (error) {
       clearTimeout(slowTimer);
       if (requestId !== chartRequestRef.current) return;
-      console.error('Chart data error:', error);
+      if (import.meta.env.DEV) {
+        console.error('Chart data error:', error);
+      }
+      const status = error?.response?.status;
+      if (status === 503 || !error?.response) {
+        autoRetryRef.current = setTimeout(() => {
+          loadChartData();
+        }, 12000);
+      }
       setData([]);
     } finally {
       if (requestId !== chartRequestRef.current) return;
