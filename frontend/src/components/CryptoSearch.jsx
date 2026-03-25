@@ -24,7 +24,8 @@ export default function CryptoSearch({ onSelectCrypto }) {
       const response = await cryptoAPI.searchCrypto(search);
       const backendResults = response.data.results;
       const coingeckoResults = response.data.coins;
-      const normalizedResults = (backendResults || coingeckoResults || []).map((coin) => ({
+      const coincapResults = response.data.data;
+      const normalizedResults = (backendResults || coingeckoResults || coincapResults || []).map((coin) => ({
         id: coin.id,
         name: coin.name,
         symbol: coin.symbol?.toUpperCase() || ''
@@ -44,7 +45,8 @@ export default function CryptoSearch({ onSelectCrypto }) {
       const response = await cryptoAPI.getTrending();
       const backendTrending = response.data.trending;
       const coingeckoTrending = response.data.coins?.map((entry) => entry.item);
-      const normalizedTrending = (backendTrending || coingeckoTrending || []).map((coin) => ({
+      const coincapTrending = response.data.data;
+      const normalizedTrending = (backendTrending || coingeckoTrending || coincapTrending || []).map((coin) => ({
         id: coin.id,
         name: coin.name,
         symbol: coin.symbol?.toUpperCase() || ''
