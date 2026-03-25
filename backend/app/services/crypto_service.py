@@ -8,6 +8,38 @@ import asyncio
 COINCAP_BASE = "https://api.coincap.io/v2"
 
 
+async def _resolve_coincap_id(client: httpx.AsyncClient, coin_id: str) -> str | None:
+    """
+    Return the CoinCap asset ID that corresponds to `coin_id`.
+    Tries a direct lookup first; if that 404s it falls back to a text search.
+    Returns None when no match can be found.
+    """
+    try:
+        r = await client.get(f"{COINCAP_BASE}/assets/{coin_id}", timeout=10)
+        if r.status_code == 200:
+            data = r.json().get("data") or {}
+            if data.get("id"):
+                return data["id"]
+        # Direct lookup missed – search by slug (replace hyphens with spaces)
+        search_q = coin_id.replace("-", " ")
+        rs = await client.get(
+            f"{COINCAP_BASE}/assets",
+            params={"search": search_q, "limit": 5},
+            timeout=10,
+        )
+        if rs.status_code == 200:
+            assets = rs.json().get("data", [])
+            # Prefer exact id match, then first result
+            match = next((a for a in assets if a.get("id") == coin_id), None)
+            if match is None and assets:
+                match = assets[0]
+            if match and match.get("id"):
+                return match["id"]
+    except Exception as e:
+        print(f"CoinCap ID resolution failed for {coin_id}: {e}")
+    return None
+
+
 class CryptoAPIService:
     def __init__(self):
         self.base_url = settings.COINGECKO_API_URL
@@ -48,6 +80,11 @@ class CryptoAPIService:
                 data = response.json()
                 if data:
                     await cache_manager.set(cache_key, data)
+                    # Also cache each coin individually so single-ID Dashboard calls hit cache
+                    for coin in data:
+                        if coin.get("id"):
+                            single_key = f"crypto_data:{coin['id']}"
+                            await cache_manager.set(single_key, [coin])
                     return data
                 print("CoinGecko returned empty data, falling back to CoinCap")
         except Exception as e:
@@ -59,26 +96,41 @@ class CryptoAPIService:
                 normalized = []
                 for coin_id in crypto_ids:
                     try:
-                        r = await client.get(
-                            f"{COINCAP_BASE}/assets/{coin_id}",
-                            timeout=10,
-                        )
-                        r.raise_for_status()
-                        a = r.json().get("data") or {}
+                        # Resolve the actual CoinCap ID (may differ from CoinGecko ID)
+                        coincap_id = await _resolve_coincap_id(client, coin_id)
+                        if not coincap_id:
+                            print(f"CoinCap: no asset found for {coin_id}, skipping")
+                            continue
+                        # If ID changed, refetch the full asset record
+                        if coincap_id != coin_id:
+                            r2 = await client.get(f"{COINCAP_BASE}/assets/{coincap_id}", timeout=10)
+                            r2.raise_for_status()
+                            a = r2.json().get("data") or {}
+                        else:
+                            r = await client.get(f"{COINCAP_BASE}/assets/{coin_id}", timeout=10)
+                            r.raise_for_status()
+                            a = r.json().get("data") or {}
                         if a.get("id"):
                             normalized.append({
-                                "id": a["id"],
+                                # Keep the original CoinGecko ID so the frontend stays consistent
+                                "id": coin_id,
                                 "symbol": (a.get("symbol") or "").upper(),
                                 "name": a.get("name", ""),
                                 "current_price": float(a.get("priceUsd") or 0),
                                 "market_cap": float(a.get("marketCapUsd") or 0),
                                 "price_change_percentage_24h": float(a.get("changePercent24Hr") or 0),
                                 "circulating_supply": float(a.get("supply") or 0),
+                                # Store CoinCap ID for history lookups
+                                "_coincap_id": a["id"],
                             })
                     except Exception as inner_e:
                         print(f"CoinCap individual fetch failed for {coin_id}: {inner_e}")
                 if normalized:
                     await cache_manager.set(cache_key, normalized)
+                    # Also cache each coin individually so Dashboard hits the cache
+                    for coin in normalized:
+                        single_key = f"crypto_data:{coin['id']}"
+                        await cache_manager.set(single_key, [coin])
                 return normalized
         except Exception as e:
             print(f"CoinCap error (get_crypto_data): {e}")
@@ -126,8 +178,13 @@ class CryptoAPIService:
                 interval = "d1"
 
             async with httpx.AsyncClient() as client:
+                # Resolve the CoinCap ID (CoinGecko IDs often differ)
+                coincap_id = await _resolve_coincap_id(client, crypto_id)
+                if not coincap_id:
+                    print(f"CoinCap: cannot resolve id for {crypto_id}, returning empty history")
+                    return {}
                 response = await client.get(
-                    f"{COINCAP_BASE}/assets/{crypto_id}/history",
+                    f"{COINCAP_BASE}/assets/{coincap_id}/history",
                     params={"interval": interval, "start": start_ms, "end": end_ms},
                     timeout=10,
                 )
