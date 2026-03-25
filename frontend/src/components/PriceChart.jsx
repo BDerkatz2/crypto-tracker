@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { cryptoAPI } from '../services/api';
 
@@ -6,6 +6,7 @@ export default function PriceChart({ cryptoId, cryptoName }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [period, setPeriod] = useState(7);
+  const chartRequestRef = useRef(0);
 
   useEffect(() => {
     if (cryptoId) {
@@ -14,20 +15,29 @@ export default function PriceChart({ cryptoId, cryptoName }) {
   }, [cryptoId, period]);
 
   const loadChartData = async () => {
+    const requestId = ++chartRequestRef.current;
     setLoading(true);
+    setData([]);
     try {
       const response = await cryptoAPI.getPriceHistory(cryptoId, period);
+
+      if (requestId !== chartRequestRef.current) return;
       
       if (response.data.prices) {
         const formattedData = response.data.prices.map(([timestamp, price]) => ({
           date: new Date(timestamp).toLocaleDateString(),
-          price: price.toFixed(2)
+          price: Number(price.toFixed(2))
         }));
         setData(formattedData);
+      } else {
+        setData([]);
       }
     } catch (error) {
+      if (requestId !== chartRequestRef.current) return;
       console.error('Chart data error:', error);
+      setData([]);
     } finally {
+      if (requestId !== chartRequestRef.current) return;
       setLoading(false);
     }
   };

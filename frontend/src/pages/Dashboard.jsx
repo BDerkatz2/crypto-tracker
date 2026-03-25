@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import CryptoSearch from '../components/CryptoSearch';
 import PriceChart from '../components/PriceChart';
 import { cryptoAPI } from '../services/api';
@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [cryptoDetails, setCryptoDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(false);
+  const detailsRequestRef = useRef(0);
 
   useEffect(() => {
     if (selectedCrypto) {
@@ -16,13 +17,18 @@ export default function Dashboard() {
   }, [selectedCrypto]);
 
   const loadCryptoDetails = async () => {
+    const requestId = ++detailsRequestRef.current;
     setLoading(true);
     setDetailsError(false);
+    setCryptoDetails(null);
     try {
       const response = await cryptoAPI.getCryptoData(selectedCrypto.id);
       // CoinGecko /coins/markets returns an array directly
       const list = Array.isArray(response.data) ? response.data : response.data?.data;
       const details = list?.[0];
+
+      // Ignore stale responses from previous selections.
+      if (requestId !== detailsRequestRef.current) return;
 
       if (details && details.id) {
         setCryptoDetails(details);
@@ -31,10 +37,12 @@ export default function Dashboard() {
         setDetailsError(true);
       }
     } catch (error) {
+      if (requestId !== detailsRequestRef.current) return;
       console.error('Error loading crypto details:', error);
       setCryptoDetails(null);
       setDetailsError(true);
     } finally {
+      if (requestId !== detailsRequestRef.current) return;
       setLoading(false);
     }
   };
