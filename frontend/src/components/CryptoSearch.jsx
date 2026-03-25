@@ -7,6 +7,23 @@ export default function CryptoSearch({ onSelectCrypto }) {
   const [loading, setLoading] = useState(false);
   const [showTrending, setShowTrending] = useState(true);
 
+  const filterSupportedResults = async (coins) => {
+    if (!coins.length) {
+      return [];
+    }
+
+    try {
+      const ids = coins.map((coin) => coin.id).join(',');
+      const response = await cryptoAPI.getCryptoData(ids);
+      const supportedIds = new Set((response.data?.data || []).map((coin) => coin.id));
+      const filtered = coins.filter((coin) => supportedIds.has(coin.id));
+      return filtered.length > 0 ? filtered : coins;
+    } catch (error) {
+      console.warn('Could not validate search results against data endpoint:', error);
+      return coins;
+    }
+  };
+
   useEffect(() => {
     if (search.trim()) {
       handleSearch();
@@ -23,15 +40,14 @@ export default function CryptoSearch({ onSelectCrypto }) {
     try {
       const response = await cryptoAPI.searchCrypto(search);
       const backendResults = response.data.results;
-      const coingeckoResults = response.data.coins;
-      const coincapResults = response.data.data;
-      const normalizedResults = (backendResults || coingeckoResults || coincapResults || []).map((coin) => ({
+      const normalizedResults = (backendResults || []).map((coin) => ({
         id: coin.id,
         name: coin.name,
         symbol: coin.symbol?.toUpperCase() || ''
       }));
 
-      setResults(normalizedResults);
+      const filteredResults = await filterSupportedResults(normalizedResults);
+      setResults(filteredResults);
       setShowTrending(false);
     } catch (error) {
       console.error('Search error:', error);
@@ -44,15 +60,14 @@ export default function CryptoSearch({ onSelectCrypto }) {
     try {
       const response = await cryptoAPI.getTrending();
       const backendTrending = response.data.trending;
-      const coingeckoTrending = response.data.coins?.map((entry) => entry.item);
-      const coincapTrending = response.data.data;
-      const normalizedTrending = (backendTrending || coingeckoTrending || coincapTrending || []).map((coin) => ({
+      const normalizedTrending = (backendTrending || []).map((coin) => ({
         id: coin.id,
         name: coin.name,
         symbol: coin.symbol?.toUpperCase() || ''
       }));
 
-      setResults(normalizedTrending);
+      const filteredTrending = await filterSupportedResults(normalizedTrending);
+      setResults(filteredTrending);
     } catch (error) {
       console.error('Trending error:', error);
     }
