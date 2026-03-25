@@ -3,6 +3,7 @@ import Navigation from './components/Navigation';
 import Dashboard from './pages/Dashboard';
 import Portfolio from './pages/Portfolio';
 import Watchlist from './pages/Watchlist';
+import { pingBackend } from './services/api';
 import './index.css';
 
 const VALID_PAGES = new Set(['dashboard', 'portfolio', 'watchlist']);
@@ -16,6 +17,9 @@ function App() {
   const [currentPage, setCurrentPage] = useState(getPageFromHash);
 
   useEffect(() => {
+    // Pre-warm the backend immediately so it wakes from sleep before user picks a coin.
+    pingBackend();
+
     const handleHashChange = () => {
       setCurrentPage(getPageFromHash());
     };

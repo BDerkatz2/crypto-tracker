@@ -5,6 +5,7 @@ import { cryptoAPI } from '../services/api';
 export default function PriceChart({ cryptoId, cryptoName }) {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [slowLoad, setSlowLoad] = useState(false);
   const [period, setPeriod] = useState(7);
   const chartRequestRef = useRef(0);
 
@@ -17,9 +18,14 @@ export default function PriceChart({ cryptoId, cryptoName }) {
   const loadChartData = async () => {
     const requestId = ++chartRequestRef.current;
     setLoading(true);
+    setSlowLoad(false);
     setData([]);
+
+    const slowTimer = setTimeout(() => setSlowLoad(true), 5000);
+
     try {
       const response = await cryptoAPI.getPriceHistory(cryptoId, period);
+      clearTimeout(slowTimer);
 
       if (requestId !== chartRequestRef.current) return;
       
@@ -33,12 +39,14 @@ export default function PriceChart({ cryptoId, cryptoName }) {
         setData([]);
       }
     } catch (error) {
+      clearTimeout(slowTimer);
       if (requestId !== chartRequestRef.current) return;
       console.error('Chart data error:', error);
       setData([]);
     } finally {
       if (requestId !== chartRequestRef.current) return;
       setLoading(false);
+      setSlowLoad(false);
     }
   };
 
@@ -74,7 +82,7 @@ export default function PriceChart({ cryptoId, cryptoName }) {
         <div className="h-80 flex items-center justify-center text-slate-400">
           <div className="text-center">
             <div className="animate-spin text-2xl mb-2">⌛</div>
-            Loading chart...
+            {slowLoad ? 'Warming up data service...' : 'Loading chart...'}
           </div>
         </div>
       ) : data.length > 0 ? (

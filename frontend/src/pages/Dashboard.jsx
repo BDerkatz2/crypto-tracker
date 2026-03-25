@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [cryptoDetails, setCryptoDetails] = useState(null);
   const [loading, setLoading] = useState(false);
   const [detailsError, setDetailsError] = useState(false);
+  const [slowLoad, setSlowLoad] = useState(false);
   const detailsRequestRef = useRef(0);
 
   useEffect(() => {
@@ -21,14 +22,23 @@ export default function Dashboard() {
     setLoading(true);
     setDetailsError(false);
     setCryptoDetails(null);
+    setSlowLoad(false);
+
+    const slowTimer = setTimeout(() => setSlowLoad(true), 5000);
+
     try {
       const response = await cryptoAPI.getCryptoData(selectedCrypto.id);
-      // CoinGecko /coins/markets returns an array directly
-      const list = Array.isArray(response.data) ? response.data : response.data?.data;
-      const details = list?.[0];
+      clearTimeout(slowTimer);
 
-      // Ignore stale responses from previous selections.
       if (requestId !== detailsRequestRef.current) return;
+
+      // Backend returns { data: [...], total: N }
+      const list = Array.isArray(response.data)
+        ? response.data
+        : Array.isArray(response.data?.data)
+          ? response.data.data
+          : null;
+      const details = list?.[0];
 
       if (details && details.id) {
         setCryptoDetails(details);
@@ -37,6 +47,7 @@ export default function Dashboard() {
         setDetailsError(true);
       }
     } catch (error) {
+      clearTimeout(slowTimer);
       if (requestId !== detailsRequestRef.current) return;
       console.error('Error loading crypto details:', error);
       setCryptoDetails(null);
@@ -44,6 +55,7 @@ export default function Dashboard() {
     } finally {
       if (requestId !== detailsRequestRef.current) return;
       setLoading(false);
+      setSlowLoad(false);
     }
   };
 
@@ -92,7 +104,10 @@ export default function Dashboard() {
 
                   {loading ? (
                     <div className="mt-4 text-center text-slate-400">
-                      <div className="inline-block animate-spin">⌛</div> Loading details...
+                      <div className="inline-block animate-spin">⌛</div>
+                      {slowLoad
+                        ? ' Warming up data service, please wait...'
+                        : ' Loading details...'}
                     </div>
                   ) : cryptoDetails ? (
                     <div className="mt-6 grid grid-cols-2 gap-4">
