@@ -1,6 +1,7 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 
 export const cryptoAPI = {
   // Search for cryptos
@@ -12,12 +13,23 @@ export const cryptoAPI = {
     axios.get(`${API_BASE_URL}/crypto/trending`),
   
   // Get crypto data
+  // Get crypto data — calls CoinGecko directly so it works even when backend sleeps
   getCryptoData: (ids) =>
-    axios.get(`${API_BASE_URL}/crypto/data`, { params: { ids } }),
-  
-  // Get price history
+    axios.get(`${COINGECKO_BASE}/coins/markets`, {
+      params: {
+        ids,
+        vs_currency: 'usd',
+        order: 'market_cap_desc',
+        sparkline: false,
+        price_change_percentage: '24h'
+      }
+    }),
+
+  // Get price history — calls CoinGecko directly
   getPriceHistory: (cryptoId, days = 7) =>
-    axios.get(`${API_BASE_URL}/crypto/history/${cryptoId}`, { params: { days } }),
+    axios.get(`${COINGECKO_BASE}/coins/${cryptoId}/market_chart`, {
+      params: { vs_currency: 'usd', days }
+    }),
   
   // Watchlist operations
   getWatchlist: (userId) =>

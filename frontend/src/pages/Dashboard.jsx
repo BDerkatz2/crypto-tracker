@@ -20,10 +20,9 @@ export default function Dashboard() {
     setDetailsError(false);
     try {
       const response = await cryptoAPI.getCryptoData(selectedCrypto.id);
-      const payload = response.data;
-      const details = Array.isArray(payload?.data)
-        ? payload.data[0]
-        : payload;
+      // CoinGecko /coins/markets returns an array directly
+      const list = Array.isArray(response.data) ? response.data : response.data?.data;
+      const details = list?.[0];
 
       if (details && details.id) {
         setCryptoDetails(details);
