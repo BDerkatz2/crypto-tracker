@@ -11,6 +11,15 @@ export default function Dashboard() {
   const [detailsErrorMessage, setDetailsErrorMessage] = useState('');
   const [slowLoad, setSlowLoad] = useState(false);
   const detailsRequestRef = useRef(0);
+  const autoRetryRef = useRef(null);
+
+  useEffect(() => {
+    return () => {
+      if (autoRetryRef.current) {
+        clearTimeout(autoRetryRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (selectedCrypto) {
@@ -19,6 +28,11 @@ export default function Dashboard() {
   }, [selectedCrypto]);
 
   const loadCryptoDetails = async () => {
+    if (autoRetryRef.current) {
+      clearTimeout(autoRetryRef.current);
+      autoRetryRef.current = null;
+    }
+
     const requestId = ++detailsRequestRef.current;
     setLoading(true);
     setDetailsError(false);
@@ -66,6 +80,12 @@ export default function Dashboard() {
           ? 'Data service is waking up. Please wait 30-60 seconds and try again.'
           : 'Could not load price data right now. Please try again.'
       );
+
+      if ((status === 503 || !error?.response) && selectedCrypto?.id) {
+        autoRetryRef.current = setTimeout(() => {
+          loadCryptoDetails();
+        }, 12000);
+      }
     } finally {
       if (requestId !== detailsRequestRef.current) return;
       setLoading(false);
