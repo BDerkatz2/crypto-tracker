@@ -64,6 +64,19 @@ export default function Dashboard() {
                       <h2 className="text-3xl font-bold text-white">{selectedCrypto.name}</h2>
                       <p className="text-slate-400 text-lg">{selectedCrypto.symbol}</p>
                     </div>
+                    {cryptoDetails && (
+                      <div className="text-right">
+                        <p className="text-3xl font-bold text-white">
+                          ${cryptoDetails.current_price?.toLocaleString() || 'N/A'}
+                        </p>
+                        <p className={`text-sm font-semibold mt-1 ${cryptoDetails.price_change_percentage_24h >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {cryptoDetails.price_change_percentage_24h >= 0 ? '▲' : '▼'} {Math.abs(cryptoDetails.price_change_percentage_24h)?.toFixed(2) || 'N/A'}% (24h)
+                        </p>
+                      </div>
+                    )}
+                    {loading && (
+                      <div className="text-slate-400 text-sm animate-pulse">Loading price...</div>
+                    )}
                   </div>
 
                   {loading ? (
@@ -72,12 +85,6 @@ export default function Dashboard() {
                     </div>
                   ) : cryptoDetails ? (
                     <div className="mt-6 grid grid-cols-2 gap-4">
-                      <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
-                        <span className="text-slate-400 text-sm">Current Price</span>
-                        <p className="text-2xl font-bold text-white mt-1">
-                          ${cryptoDetails.current_price?.toLocaleString() || 'N/A'}
-                        </p>
-                      </div>
                       <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
                         <span className="text-slate-400 text-sm">Market Cap</span>
                         <p className="text-2xl font-bold text-white mt-1">
