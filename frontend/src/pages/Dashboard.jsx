@@ -7,6 +7,7 @@ export default function Dashboard() {
   const [selectedCrypto, setSelectedCrypto] = useState(null);
   const [cryptoDetails, setCryptoDetails] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [detailsError, setDetailsError] = useState(false);
 
   useEffect(() => {
     if (selectedCrypto) {
@@ -16,6 +17,7 @@ export default function Dashboard() {
 
   const loadCryptoDetails = async () => {
     setLoading(true);
+    setDetailsError(false);
     try {
       const response = await cryptoAPI.getCryptoData(selectedCrypto.id);
       const payload = response.data;
@@ -27,10 +29,12 @@ export default function Dashboard() {
         setCryptoDetails(details);
       } else {
         setCryptoDetails(null);
+        setDetailsError(true);
       }
     } catch (error) {
       console.error('Error loading crypto details:', error);
       setCryptoDetails(null);
+      setDetailsError(true);
     } finally {
       setLoading(false);
     }
@@ -83,8 +87,7 @@ export default function Dashboard() {
                     <div className="mt-4 text-center text-slate-400">
                       <div className="inline-block animate-spin">⌛</div> Loading details...
                     </div>
-                  ) : cryptoDetails ? (
-                    <div className="mt-6 grid grid-cols-2 gap-4">
+                  ) : cryptoDetails ? (                    <div className="mt-6 grid grid-cols-2 gap-4">
                       <div className="bg-slate-900/50 p-4 rounded-lg border border-slate-700/50">
                         <span className="text-slate-400 text-sm">Market Cap</span>
                         <p className="text-2xl font-bold text-white mt-1">
@@ -105,6 +108,11 @@ export default function Dashboard() {
                       </div>
                     </div>
                   ) : null}
+                  {detailsError && !loading && (
+                    <div className="mt-4 text-center text-slate-500 text-sm">
+                      Could not load price data. Check console for details.
+                    </div>
+                  )}
                 </div>
 
                 {/* Price Chart */}
