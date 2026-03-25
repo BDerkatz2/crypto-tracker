@@ -22,7 +22,15 @@ export default function CryptoSearch({ onSelectCrypto }) {
     setLoading(true);
     try {
       const response = await cryptoAPI.searchCrypto(search);
-      setResults(response.data.results || []);
+      const backendResults = response.data.results;
+      const coingeckoResults = response.data.coins;
+      const normalizedResults = (backendResults || coingeckoResults || []).map((coin) => ({
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol?.toUpperCase() || ''
+      }));
+
+      setResults(normalizedResults);
       setShowTrending(false);
     } catch (error) {
       console.error('Search error:', error);
@@ -34,7 +42,15 @@ export default function CryptoSearch({ onSelectCrypto }) {
   const loadTrending = async () => {
     try {
       const response = await cryptoAPI.getTrending();
-      setResults(response.data.trending || []);
+      const backendTrending = response.data.trending;
+      const coingeckoTrending = response.data.coins?.map((entry) => entry.item);
+      const normalizedTrending = (backendTrending || coingeckoTrending || []).map((coin) => ({
+        id: coin.id,
+        name: coin.name,
+        symbol: coin.symbol?.toUpperCase() || ''
+      }));
+
+      setResults(normalizedTrending);
     } catch (error) {
       console.error('Trending error:', error);
     }

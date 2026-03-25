@@ -6,11 +6,11 @@ const COINGECKO_BASE = 'https://api.coingecko.com/api/v3';
 export const cryptoAPI = {
   // Search for cryptos
   searchCrypto: (query) => 
-    axios.get(`${API_BASE_URL}/crypto/search`, { params: { q: query } }),
+    axios.get(`${COINGECKO_BASE}/search`, { params: { query } }),
   
   // Get trending cryptos
   getTrending: () =>
-    axios.get(`${API_BASE_URL}/crypto/trending`),
+    axios.get(`${COINGECKO_BASE}/search/trending`),
   
   // Get crypto data
   // Get crypto data — calls CoinGecko directly so it works even when backend sleeps
