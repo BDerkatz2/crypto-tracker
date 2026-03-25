@@ -43,6 +43,7 @@ class CryptoAPIService:
                     headers=self._get_headers(),
                     timeout=10,
                 )
+                print(f"CoinGecko /coins/markets status: {response.status_code}")
                 response.raise_for_status()
                 data = response.json()
                 if data:
@@ -52,29 +53,30 @@ class CryptoAPIService:
         except Exception as e:
             print(f"CoinGecko error (get_crypto_data): {e} – falling back to CoinCap")
 
-        # 2. Fall back to CoinCap
+        # 2. Fall back to CoinCap — fetch each asset individually for reliability
         try:
             async with httpx.AsyncClient() as client:
-                response = await client.get(
-                    f"{COINCAP_BASE}/assets",
-                    params={"ids": ",".join(crypto_ids)},
-                    timeout=10,
-                )
-                response.raise_for_status()
-                assets = response.json().get("data", [])
-                normalized = [
-                    {
-                        "id": a["id"],
-                        "symbol": a["symbol"].upper(),
-                        "name": a["name"],
-                        "current_price": float(a.get("priceUsd") or 0),
-                        "market_cap": float(a.get("marketCapUsd") or 0),
-                        "price_change_percentage_24h": float(a.get("changePercent24Hr") or 0),
-                        "circulating_supply": float(a.get("supply") or 0),
-                    }
-                    for a in assets
-                    if a.get("id")
-                ]
+                normalized = []
+                for coin_id in crypto_ids:
+                    try:
+                        r = await client.get(
+                            f"{COINCAP_BASE}/assets/{coin_id}",
+                            timeout=10,
+                        )
+                        r.raise_for_status()
+                        a = r.json().get("data") or {}
+                        if a.get("id"):
+                            normalized.append({
+                                "id": a["id"],
+                                "symbol": (a.get("symbol") or "").upper(),
+                                "name": a.get("name", ""),
+                                "current_price": float(a.get("priceUsd") or 0),
+                                "market_cap": float(a.get("marketCapUsd") or 0),
+                                "price_change_percentage_24h": float(a.get("changePercent24Hr") or 0),
+                                "circulating_supply": float(a.get("supply") or 0),
+                            })
+                    except Exception as inner_e:
+                        print(f"CoinCap individual fetch failed for {coin_id}: {inner_e}")
                 if normalized:
                     await cache_manager.set(cache_key, normalized)
                 return normalized
@@ -176,7 +178,7 @@ class CryptoAPIService:
                 response.raise_for_status()
                 assets = response.json().get("data", [])
                 return [
-                    {"id": a["id"], "name": a["name"], "symbol": a["symbol"].upper()}
+                    {"id": a["id"], "name": a["name"], "symbol": (a.get("symbol") or "").upper()}
                     for a in assets
                 ]
         except Exception as e:
