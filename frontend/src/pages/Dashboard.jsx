@@ -43,6 +43,7 @@ export default function Dashboard() {
       if (details && details.id) {
         setCryptoDetails(details);
       } else {
+        console.warn('getCryptoData returned no usable details. Raw response:', response.data);
         setCryptoDetails(null);
         setDetailsError(true);
       }
