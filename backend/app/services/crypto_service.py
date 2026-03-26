@@ -1,5 +1,6 @@
 import httpx
 import time
+import re
 from app.config import settings
 from app.cache import cache_manager
 from typing import List, Dict, Optional
@@ -15,26 +16,63 @@ async def _resolve_coincap_id(client: httpx.AsyncClient, coin_id: str) -> str | 
     Returns None when no match can be found.
     """
     try:
-        r = await client.get(f"{COINCAP_BASE}/assets/{coin_id}", timeout=10)
-        if r.status_code == 200:
-            data = r.json().get("data") or {}
-            if data.get("id"):
-                return data["id"]
-        # Direct lookup missed – search by slug (replace hyphens with spaces)
-        search_q = coin_id.replace("-", " ")
-        rs = await client.get(
-            f"{COINCAP_BASE}/assets",
-            params={"search": search_q, "limit": 5},
-            timeout=10,
-        )
-        if rs.status_code == 200:
+        normalized_id = (coin_id or "").strip().lower()
+        # CoinGecko often appends numeric suffixes (e.g. "siren-2") where CoinCap uses "siren".
+        base_id = re.sub(r"-\d+$", "", normalized_id)
+
+        # 1) Try direct lookups with both full and de-suffixed IDs.
+        direct_candidates = [normalized_id]
+        if base_id and base_id != normalized_id:
+            direct_candidates.append(base_id)
+
+        for candidate in direct_candidates:
+            r = await client.get(f"{COINCAP_BASE}/assets/{candidate}", timeout=10)
+            if r.status_code == 200:
+                data = r.json().get("data") or {}
+                if data.get("id"):
+                    return data["id"]
+
+        # 2) Search using multiple queries and rank results.
+        query_candidates = [normalized_id.replace("-", " ")]
+        if base_id and base_id != normalized_id:
+            query_candidates.append(base_id.replace("-", " "))
+        # Deduplicate while keeping order.
+        seen = set()
+        query_candidates = [q for q in query_candidates if not (q in seen or seen.add(q))]
+
+        best_match_id = None
+        best_score = -1
+        for search_q in query_candidates:
+            rs = await client.get(
+                f"{COINCAP_BASE}/assets",
+                params={"search": search_q, "limit": 10},
+                timeout=10,
+            )
+            if rs.status_code != 200:
+                continue
             assets = rs.json().get("data", [])
-            # Prefer exact id match, then first result
-            match = next((a for a in assets if a.get("id") == coin_id), None)
-            if match is None and assets:
-                match = assets[0]
-            if match and match.get("id"):
-                return match["id"]
+            for asset in assets:
+                asset_id = (asset.get("id") or "").lower()
+                asset_name = (asset.get("name") or "").lower()
+                score = 0
+                if asset_id == normalized_id:
+                    score = 100
+                elif asset_id == base_id:
+                    score = 95
+                elif asset_name == normalized_id.replace("-", " "):
+                    score = 90
+                elif asset_name == base_id.replace("-", " "):
+                    score = 85
+                elif base_id and base_id in asset_id:
+                    score = 70
+                elif normalized_id and normalized_id in asset_id:
+                    score = 60
+                if score > best_score and asset_id:
+                    best_score = score
+                    best_match_id = asset_id
+
+        if best_match_id:
+            return best_match_id
     except Exception as e:
         print(f"CoinCap ID resolution failed for {coin_id}: {e}")
     return None
