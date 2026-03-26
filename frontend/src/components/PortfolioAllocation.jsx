@@ -7,6 +7,10 @@ export default function PortfolioAllocation({ portfolio }) {
   useEffect(() => {
     if (portfolio && portfolio.length > 0) {
       const total = portfolio.reduce((sum, item) => sum + item.current_value, 0);
+      if (total <= 0) {
+        setData([]);
+        return;
+      }
       const chartData = portfolio.map(item => ({
         name: item.symbol,
         value: parseFloat(((item.current_value / total) * 100).toFixed(2))

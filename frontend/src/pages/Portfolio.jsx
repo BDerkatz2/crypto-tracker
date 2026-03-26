@@ -25,7 +25,47 @@ export default function Portfolio() {
     setLoading(true);
     try {
       const response = await cryptoAPI.getPortfolio(DEMO_USER_ID);
-      setPortfolio(response.data);
+      const holdings = Array.isArray(response.data) ? response.data : [];
+
+      if (!holdings.length) {
+        setPortfolio([]);
+        return;
+      }
+
+      // Enrich persisted holdings with live prices from the same provider used by Dashboard.
+      let priceMap = new Map();
+      try {
+        const ids = holdings.map((item) => item.crypto_id).filter(Boolean).join(',');
+        const pricesResponse = await cryptoAPI.getCryptoData(ids);
+        const priceRows = Array.isArray(pricesResponse?.data?.data) ? pricesResponse.data.data : [];
+        priceMap = new Map(priceRows.map((row) => [row.id, Number(row.current_price || 0)]));
+      } catch (priceError) {
+        console.warn('Could not load live portfolio prices, using stored values.', priceError);
+      }
+
+      const enriched = holdings.map((item) => {
+        const fallbackCurrentPrice = Number(item.current_price || item.purchase_price || 0);
+        const currentPrice = Number(priceMap.get(item.crypto_id) || fallbackCurrentPrice);
+        const amount = Number(item.amount || 0);
+        const purchasePrice = Number(item.purchase_price || 0);
+        const investedValue = amount * purchasePrice;
+        const currentValue = amount * currentPrice;
+        const profitLoss = currentValue - investedValue;
+        const profitLossPercentage = purchasePrice > 0
+          ? ((currentPrice - purchasePrice) / purchasePrice) * 100
+          : 0;
+
+        return {
+          ...item,
+          current_price: currentPrice,
+          invested_value: investedValue,
+          current_value: currentValue,
+          profit_loss: profitLoss,
+          profit_loss_percentage: profitLossPercentage,
+        };
+      });
+
+      setPortfolio(enriched);
     } catch (error) {
       console.error('Error loading portfolio:', error);
     } finally {
@@ -190,7 +230,7 @@ export default function Portfolio() {
 
           {/* Insights Sidebar */}
           <div>
-            <InsightsPanel userId={DEMO_USER_ID} />
+            <InsightsPanel userId={DEMO_USER_ID} portfolio={portfolio} />
           </div>
         </div>
 

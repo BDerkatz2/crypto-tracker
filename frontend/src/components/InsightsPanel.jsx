@@ -1,20 +1,78 @@
 import React, { useState, useEffect } from 'react';
-import { cryptoAPI } from '../services/api';
 
-export default function InsightsPanel({ userId }) {
+export default function InsightsPanel({ userId, portfolio = [] }) {
   const [insights, setInsights] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     loadInsights();
-  }, [userId]);
+  }, [userId, portfolio]);
 
   const loadInsights = async () => {
     setLoading(true);
     try {
-      const response = await cryptoAPI.getPortfolioInsights(userId);
-      setInsights(response.data);
+      if (!portfolio.length) {
+        setInsights({
+          total_value: 0,
+          total_invested: 0,
+          profit_loss: 0,
+          profit_loss_percentage: 0,
+          best_performer: null,
+          worst_performer: null,
+          top_holdings: [],
+          diversity_score: 0,
+        });
+        setError(null);
+        return;
+      }
+
+      const normalized = portfolio.map((item) => {
+        const amount = Number(item.amount || 0);
+        const purchasePrice = Number(item.purchase_price || 0);
+        const currentPrice = Number(item.current_price || 0);
+        const investedValue = Number(item.invested_value ?? amount * purchasePrice);
+        const currentValue = Number(item.current_value ?? amount * currentPrice);
+        const profitLoss = Number(item.profit_loss ?? currentValue - investedValue);
+        const profitLossPercentage = purchasePrice > 0
+          ? Number(item.profit_loss_percentage ?? ((currentPrice - purchasePrice) / purchasePrice) * 100)
+          : 0;
+
+        return {
+          symbol: item.symbol,
+          amount,
+          purchase_price: purchasePrice,
+          current_price: currentPrice,
+          invested_value: investedValue,
+          current_value: currentValue,
+          profit_loss: profitLoss,
+          profit_loss_percentage: profitLossPercentage,
+        };
+      });
+
+      const totalValue = normalized.reduce((sum, item) => sum + item.current_value, 0);
+      const totalInvested = normalized.reduce((sum, item) => sum + item.invested_value, 0);
+      const profitLoss = totalValue - totalInvested;
+      const profitLossPercentage = totalInvested > 0 ? (profitLoss / totalInvested) * 100 : 0;
+      const bestPerformer = normalized.reduce((best, item) =>
+        !best || item.profit_loss_percentage > best.profit_loss_percentage ? item : best, null);
+      const worstPerformer = normalized.reduce((worst, item) =>
+        !worst || item.profit_loss_percentage < worst.profit_loss_percentage ? item : worst, null);
+
+      const topHoldings = [...normalized]
+        .sort((a, b) => b.current_value - a.current_value)
+        .slice(0, 5);
+
+      setInsights({
+        total_value: Number(totalValue.toFixed(2)),
+        total_invested: Number(totalInvested.toFixed(2)),
+        profit_loss: Number(profitLoss.toFixed(2)),
+        profit_loss_percentage: Number(profitLossPercentage.toFixed(2)),
+        best_performer: bestPerformer?.symbol || null,
+        worst_performer: worstPerformer?.symbol || null,
+        top_holdings: topHoldings,
+        diversity_score: Math.min(normalized.length * 15, 100),
+      });
       setError(null);
     } catch (err) {
       setError('Failed to load insights');
