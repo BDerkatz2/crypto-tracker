@@ -9,20 +9,15 @@ services:
     healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
-        fromDatabase:
-          name: crypto-tracker-db
-          property: connectionString
+        value: sqlite:///./crypto_tracker.db
       - key: REDIS_URL
-        fromService:
-          type: redis
-          name: crypto-tracker-redis
-          property: connectionString
+        value: redis://localhost:6379/0
       - key: REDIS_CACHE_EXPIRY
         value: "300"
       - key: SECRET_KEY
         generateValue: true
       - key: CORS_ORIGINS
-        value: '*'
+        value: '["https://crypto-tracker-1-kfyi.onrender.com", "http://localhost:3000"]'
       - key: COINGECKO_API_KEY
         value: ''
 
@@ -37,13 +32,3 @@ services:
       - key: VITE_API_URL
         value: https://crypto-tracker-backend.onrender.com/api/v1
 
-  - type: redis
-    name: crypto-tracker-redis
-    ipAllowList: []
-
-
-databases:
-  - name: crypto-tracker-db
-    plan: free
-    databaseName: crypto_tracker
-    user: crypto_tracker_user
